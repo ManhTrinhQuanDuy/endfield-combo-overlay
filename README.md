@@ -64,4 +64,4 @@ Screen-reading / OCR detection of the in-game squad is **explicitly not** planne
 
 ## License
 
-MIT (or your choice — pick a license when you set the repo public).
+MIT.
