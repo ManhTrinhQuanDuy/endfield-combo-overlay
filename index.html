@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EF/Chain — Combo Overlay Prototype</title>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --panel: #12151c;
+    --panel-border: #232733;
+    --text: #d8dde6;
+    --text-dim: #6b7280;
+    --electric: #4fd1ff;
+    --electric-dim: #1a3a47;
+    --physical: #ff8a4c;
+    --physical-dim: #4a2d18;
+    --good: #5fe3a3;
+    --mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+    --sans: "Inter", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    padding: 28px;
+    min-height: 100vh;
+  }
+
+  .app {
+    max-width: 980px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+  }
+
+  .brand {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    color: var(--electric);
+  }
+
+  .brand small {
+    color: var(--text-dim);
+    font-weight: 400;
+    margin-left: 8px;
+  }
+
+  h1 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 4px 0 0;
+    color: var(--text);
+    letter-spacing: 0.01em;
+  }
+
+  .subtitle {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: right;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--panel-border);
+  }
+
+  .roster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 30px;
+  }
+
+  .op-card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+    position: relative;
+  }
+
+  .op-card:hover {
+    border-color: var(--text-dim);
+  }
+
+  .op-card.selected {
+    border-color: var(--electric);
+    background: linear-gradient(180deg, rgba(79,209,255,0.06), transparent);
+  }
+
+  .op-card.selected.physical-tone {
+    border-color: var(--physical);
+    background: linear-gradient(180deg, rgba(255,138,76,0.07), transparent);
+  }
+
+  .op-name {
+    font-weight: 600;
+    font-size: 13.5px;
+    margin-bottom: 4px;
+  }
+
+  .op-meta {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-dim);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tag-pill {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+
+  .tag-electric { background: var(--electric-dim); color: var(--electric); }
+  .tag-physical { background: var(--physical-dim); color: var(--physical); }
+
+  .check {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--panel-border);
+  }
+
+  .op-card.selected .check {
+    background: var(--electric);
+    border-color: var(--electric);
+  }
+  .op-card.selected.physical-tone .check {
+    background: var(--physical);
+    border-color: var(--physical);
+  }
+
+  .squad-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+    min-height: 40px;
+    align-items: center;
+  }
+
+  .slot {
+    flex: 1;
+    border: 1px dashed var(--panel-border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  .slot.filled {
+    border-style: solid;
+    border-color: var(--panel-border);
+    color: var(--text);
+    background: var(--panel);
+    text-align: left;
+  }
+
+  .chains {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .chain-link {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--good);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .chain-link.consume {
+    border-left-color: var(--physical);
+  }
+
+  .chain-route {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chain-route .arrow {
+    color: var(--good);
+  }
+
+  .chain-link.consume .chain-route .arrow {
+    color: var(--physical);
+  }
+
+  .chain-note {
+    color: var(--text-dim);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .chain-tags {
+    margin-top: 2px;
+  }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 4px;
+    font-weight: 600;
+  }
+
+  .badge-confirmed { background: rgba(95,227,163,0.15); color: var(--good); }
+  .badge-likely { background: rgba(79,209,255,0.12); color: var(--electric); }
+  .badge-conditional { background: rgba(255,138,76,0.15); color: var(--physical); }
+  .badge-blocked { background: rgba(107,114,128,0.2); color: var(--text-dim); }
+
+  .chain-link.confidence-blocked {
+    border-left-color: var(--text-dim);
+    opacity: 0.75;
+  }
+
+  .chain-link.conflict {
+    border-left-color: #ff5c5c;
+    background: rgba(255,92,92,0.05);
+  }
+
+  .empty-state {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 30px 0;
+    text-align: center;
+    border: 1px dashed var(--panel-border);
+    border-radius: 6px;
+  }
+
+  footer {
+    margin-top: 36px;
+    padding-top: 14px;
+    border-top: 1px solid var(--panel-border);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-dim);
+  }
+
+  footer a { color: var(--electric); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="brand">EF // CHAIN<small>combo synergy prototype</small></div>
+      <h1>Squad Combo Matcher</h1>
+    </div>
+    <div class="subtitle">v0.2 — stack/duration-aware<br/>4 operators seeded</div>
+  </header>
+
+  <div class="section-label">Select up to 4 operators</div>
+  <div class="roster" id="roster"></div>
+
+  <div class="section-label">Squad</div>
+  <div class="squad-bar" id="squadBar"></div>
+
+  <div class="section-label">Combo chains found</div>
+  <div class="chains" id="chains"></div>
+
+  <footer>
+    Data sourced from endfield.wiki.gg. Proof-of-concept seed set: Perlica, Avywenna, Chen Qianyu, Endministrator.<br/>
+    Badges: <span style="color:var(--good)">CONFIRMED</span> = mechanically verified · <span style="color:var(--electric)">TIMING UNVERIFIED</span> = works, but cooldown data is missing so reliability is unknown · <span style="color:var(--physical)">CONDITIONAL</span> = AoE/timing caveat applies · <span style="color:var(--text-dim)">BLOCKED</span> = stack threshold not met by this pair alone.
+  </footer>
+</div>
+
+<script type="module">
+// ── Inline copy of operators.js (v2) + comboMatcher.js (v2) for standalone prototype ──
+const TAGS = {
+  electric_infliction: { label: "Electric Infliction", kind: "stacking", maxStacks: 3, durationSec: null, decaysOnExpiry: false },
+  electrification: { label: "Electrification", kind: "binary", maxStacks: 1, durationSec: 5, decaysOnExpiry: true },
+  vulnerable: { label: "Vulnerable", kind: "stacking", maxStacks: 4, durationSec: null, decaysOnExpiry: false },
+  lift: { label: "Lift", kind: "instant", maxStacks: 1, durationSec: 1, decaysOnExpiry: true },
+  staggered: { label: "Staggered", kind: "binary", maxStacks: 1, durationSec: null, decaysOnExpiry: false },
+};
+
+const operators = [
+  {
+    id: "perlica", name: "Perlica", rarity: 5, element: "Electric", class: "Caster",
+    role: "Support / Sub-DPS",
+    combo: {
+      name: "Instant Protocol: Chain",
+      trigger: { type: "final_strike", requires: [], requiresMode: "all", from: "controlled", cooldownSec: null,
+        description: "When controlled operator performs a Final Strike on any enemy." },
+      produces: [
+        { tag: "electrification", stacks: 1, areaOfEffect: "small_aoe" },
+        { tag: "electric_infliction", stacks: 1, areaOfEffect: "small_aoe" },
+      ],
+      consumes: [],
+      effectDescription: "Forcibly applies Electrification to the target, ignoring existing Inflictions. Lasts 5s.",
+    },
+  },
+  {
+    id: "avywenna", name: "Avywenna", rarity: 5, element: "Electric", class: "Striker",
+    role: "Main DPS",
+    combo: {
+      name: "Thunderlance: Strike",
+      trigger: { type: "final_strike",
+        requires: [{ tag: "electric_infliction", minStacks: 1 }, { tag: "electrification", minStacks: 1 }],
+        requiresMode: "any", from: "controlled", cooldownSec: null,
+        description: "When controlled operator performs a Final Strike on a target with active Electric Infliction or Electrification." },
+      produces: [],
+      consumes: [],
+      effectDescription: "Throws 3 Thunderlances at the target, dealing Electric DMG to enemies in a small area.",
+    },
+  },
+  {
+    id: "chen_qianyu", name: "Chen Qianyu", rarity: 5, element: "Physical", class: "Guard",
+    role: "Sub-DPS / Debuff Applicator",
+    combo: {
+      name: "Chi Xiao: Ascending Wind",
+      trigger: { type: "lift_applied", requires: [{ tag: "lift", minStacks: 1 }], requiresMode: "any", from: "self", cooldownSec: null,
+        description: "Triggers after applying Lift to an enemy (e.g. via her own Battle Skill)." },
+      produces: [
+        { tag: "vulnerable", stacks: 1, areaOfEffect: "single" },
+        { tag: "lift", stacks: 1, areaOfEffect: "single" },
+      ],
+      consumes: [],
+      effectDescription: "Deals Physical DMG, re-applies Lift, stacks 1 additional Vulnerable.",
+    },
+  },
+  {
+    id: "endministrator", name: "Endministrator", rarity: 6, element: "Physical", class: "Guard",
+    role: "Main DPS / Vulnerable Consumer",
+    combo: {
+      name: "Sealing Sequence",
+      trigger: { type: "any_combo_skill", requires: [], requiresMode: "all", from: "any_ally", cooldownSec: null,
+        description: "Triggered after an ally's Combo Skill deals damage." },
+      produces: [{ tag: "staggered", stacks: 1, areaOfEffect: "single" }],
+      consumes: [{ tag: "vulnerable", amount: "all" }, { tag: "lift", amount: "all" }],
+      effectDescription: "Attaches Originium Crystals, consumed early by Vulnerable/Physical-status for bonus DMG (via Battle Skill).",
+    },
+  },
+];
+
+function tagLabel(tagId) { return TAGS[tagId]?.label ?? tagId.replace(/_/g, " "); }
+function formatTags(tags) { return tags.map((t) => tagLabel(t)).join(" / "); }
+
+function buildAoeNote(satisfiedOnes) {
+  const aoeValues = satisfiedOnes.map((e) => e.match.areaOfEffect).filter(Boolean);
+  if (aoeValues.length === 0) return { flag: false, text: "" };
+  const isSingleTarget = aoeValues.every((v) => v === "single");
+  if (isSingleTarget) {
+    return { flag: true, text: `Note: this application is single-target, so it only sets up the chain on whichever enemy was hit — won't carry to a group.` };
+  }
+  return { flag: false, text: "" };
+}
+
+function buildDurationNote(satisfiedOnes, consumer) {
+  const cooldown = consumer.combo?.trigger?.cooldownSec ?? null;
+  const durations = satisfiedOnes.map((e) => TAGS[e.match.tag]?.durationSec).filter((d) => typeof d === "number");
+  if (durations.length === 0) return { flag: false, unknown: true, text: "" };
+  const shortestDuration = Math.min(...durations);
+  if (cooldown === null) {
+    return { flag: false, unknown: true, text: `(Effect lasts ~${shortestDuration}s — ${consumer.name}'s Combo Skill cooldown isn't confirmed yet, so timing reliability is unverified.)` };
+  }
+  if (cooldown > shortestDuration) {
+    return { flag: true, unknown: false, text: `Timing risk: the effect lasts ~${shortestDuration}s but ${consumer.name}'s Combo Skill is on a ${cooldown}s cooldown — the window may close before it's up.` };
+  }
+  return { flag: false, unknown: false, text: "" };
+}
+
+function findComboChains(squad) {
+  const links = [];
+
+  for (const producer of squad) {
+    const produced = producer.combo?.produces ?? [];
+    if (produced.length === 0) continue;
+    for (const consumer of squad) {
+      if (consumer.id === producer.id) continue;
+      const trigger = consumer.combo?.trigger;
+      if (!trigger || !trigger.requires || trigger.requires.length === 0) continue;
+      const mode = trigger.requiresMode ?? "all";
+      const evaluations = trigger.requires.map((req) => {
+        const match = produced.find((p) => p.tag === req.tag);
+        if (!match) return { req, satisfied: false, reason: "not_produced" };
+        const minStacks = req.minStacks ?? 1;
+        if (match.stacks < minStacks) return { req, satisfied: false, reason: "insufficient_stacks", have: match.stacks, need: minStacks };
+        return { req, satisfied: true, match };
+      });
+      const satisfiedOnes = evaluations.filter((e) => e.satisfied);
+      const linkFires = mode === "any" ? satisfiedOnes.length > 0 : satisfiedOnes.length === evaluations.length;
+
+      if (!linkFires) {
+        const shortfall = evaluations.find((e) => e.reason === "insufficient_stacks");
+        if (shortfall && mode !== "any") {
+          links.push({ from: producer.name, fromId: producer.id, to: consumer.name, toId: consumer.id,
+            type: "trigger", confidence: "blocked", sharedTags: [shortfall.req.tag],
+            note: `${producer.name} applies ${shortfall.have} stack(s) of ${tagLabel(shortfall.req.tag)}, but ${consumer.name}'s Combo Skill needs ${shortfall.need}. This pair alone won't trigger it.` });
+        }
+        continue;
+      }
+
+      const matchedTags = satisfiedOnes.map((e) => e.match.tag);
+      const aoeNote = buildAoeNote(satisfiedOnes);
+      const durationNote = buildDurationNote(satisfiedOnes, consumer);
+      const confidence = aoeNote.flag || durationNote.flag ? "conditional" : durationNote.unknown ? "likely" : "confirmed";
+
+      links.push({ from: producer.name, fromId: producer.id, to: consumer.name, toId: consumer.id,
+        type: "trigger", confidence, sharedTags: matchedTags,
+        note: [`${producer.name}'s Combo Skill applies ${formatTags(matchedTags)}, which satisfies ${consumer.name}'s Combo Skill trigger.`, aoeNote.text, durationNote.text].filter(Boolean).join(" ") });
+    }
+  }
+
+  for (const consumer of squad) {
+    const trigger = consumer.combo?.trigger;
+    if (trigger?.type === "any_combo_skill") {
+      for (const producer of squad) {
+        if (producer.id === consumer.id || !producer.combo) continue;
+        links.push({ from: producer.name, fromId: producer.id, to: consumer.name, toId: consumer.id,
+          type: "trigger", confidence: "confirmed", sharedTags: ["any_combo_skill"],
+          note: `${consumer.name}'s Combo Skill triggers off ANY ally Combo Skill — using ${producer.name}'s Combo Skill will set it off.` });
+      }
+    }
+  }
+
+  const consumeLinksByProducer = new Map();
+  for (const consumer of squad) {
+    const consumesList = consumer.combo?.consumes ?? [];
+    if (consumesList.length === 0) continue;
+    for (const producer of squad) {
+      if (producer.id === consumer.id) continue;
+      const produced = producer.combo?.produces ?? [];
+      const matchedTags = consumesList.map((c) => c.tag).filter((tag) => produced.some((p) => p.tag === tag));
+      if (matchedTags.length === 0) continue;
+      links.push({ from: producer.name, fromId: producer.id, to: consumer.name, toId: consumer.id,
+        type: "consume", confidence: "confirmed", sharedTags: matchedTags,
+        note: `${producer.name} applies ${formatTags(matchedTags)}, which ${consumer.name} can consume for bonus payoff damage.` });
+      const bucket = consumeLinksByProducer.get(producer.id) ?? [];
+      bucket.push({ consumerId: consumer.id, consumerName: consumer.name, tags: matchedTags });
+      consumeLinksByProducer.set(producer.id, bucket);
+    }
+  }
+
+  const conflicts = [];
+  for (const [producerId, consumerEntries] of consumeLinksByProducer) {
+    if (consumerEntries.length < 2) continue;
+    const producerName = squad.find((o) => o.id === producerId)?.name;
+    const overlappingTags = consumerEntries[0].tags.filter((tag) => consumerEntries.every((e) => e.tags.includes(tag)));
+    if (overlappingTags.length === 0) continue;
+    conflicts.push({ producer: producerName, consumers: consumerEntries.map((e) => e.consumerName), tags: overlappingTags,
+      note: `${consumerEntries.map((e) => e.consumerName).join(" and ")} both want to consume ${producerName}'s ${formatTags(overlappingTags)} — only one can spend it per application.` });
+  }
+
+  return { links, conflicts };
+}
+
+// ── UI wiring ──
+const selected = new Set();
+const rosterEl = document.getElementById("roster");
+const squadBarEl = document.getElementById("squadBar");
+const chainsEl = document.getElementById("chains");
+
+function render() {
+  rosterEl.innerHTML = "";
+  operators.forEach((op) => {
+    const card = document.createElement("div");
+    const isSelected = selected.has(op.id);
+    const tone = op.element === "Physical" ? "physical-tone" : "";
+    card.className = `op-card ${isSelected ? "selected " + tone : ""}`;
+    card.innerHTML = `
+      <div class="check"></div>
+      <div class="op-name">${op.name}</div>
+      <div class="op-meta">
+        <span class="tag-pill ${op.element === "Electric" ? "tag-electric" : "tag-physical"}">${op.element}</span>
+        <span>${op.class}</span>
+      </div>
+    `;
+    card.addEventListener("click", () => {
+      if (selected.has(op.id)) {
+        selected.delete(op.id);
+      } else if (selected.size < 4) {
+        selected.add(op.id);
+      }
+      render();
+    });
+    rosterEl.appendChild(card);
+  });
+
+  // squad bar
+  squadBarEl.innerHTML = "";
+  for (let i = 0; i < 4; i++) {
+    const slot = document.createElement("div");
+    const id = Array.from(selected)[i];
+    if (id) {
+      const op = operators.find((o) => o.id === id);
+      slot.className = "slot filled";
+      slot.textContent = `${i + 1}. ${op.name}`;
+    } else {
+      slot.className = "slot";
+      slot.textContent = `Slot ${i + 1} — empty`;
+    }
+    squadBarEl.appendChild(slot);
+  }
+
+  // chains
+  const squad = operators.filter((o) => selected.has(o.id));
+  chainsEl.innerHTML = "";
+  if (squad.length < 2) {
+    chainsEl.innerHTML = `<div class="empty-state">Select at least 2 operators to see combo chains.</div>`;
+    return;
+  }
+  const { links, conflicts } = findComboChains(squad);
+  if (links.length === 0) {
+    chainsEl.innerHTML = `<div class="empty-state">No combo chains found between this squad. They may still work independently — try a different combination.</div>`;
+    return;
+  }
+  links.forEach((link) => {
+    const div = document.createElement("div");
+    div.className = `chain-link ${link.type === "consume" ? "consume" : ""} confidence-${link.confidence}`;
+    const badge = {
+      confirmed: '<span class="badge badge-confirmed">CONFIRMED</span>',
+      likely: '<span class="badge badge-likely">TIMING UNVERIFIED</span>',
+      conditional: '<span class="badge badge-conditional">CONDITIONAL</span>',
+      blocked: '<span class="badge badge-blocked">BLOCKED</span>',
+    }[link.confidence] ?? "";
+    div.innerHTML = `
+      <div class="chain-route">${link.from} <span class="arrow">${link.type === "consume" ? "⇒ consumed by" : "→"}</span> ${link.to} ${badge}</div>
+      <div class="chain-note">${link.note}</div>
+    `;
+    chainsEl.appendChild(div);
+  });
+
+  if (conflicts.length > 0) {
+    const conflictHeader = document.createElement("div");
+    conflictHeader.className = "section-label";
+    conflictHeader.style.marginTop = "20px";
+    conflictHeader.textContent = "Resource conflicts";
+    chainsEl.appendChild(conflictHeader);
+    conflicts.forEach((c) => {
+      const div = document.createElement("div");
+      div.className = "chain-link conflict";
+      div.innerHTML = `<div class="chain-note">${c.note}</div>`;
+      chainsEl.appendChild(div);
+    });
+  }
+}
+
+render();
+</script>
+</body>
+</html>
